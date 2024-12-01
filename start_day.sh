@@ -5,7 +5,7 @@ cd day_$1
 
 go mod init day_$1
 touch main.go
-touch input.txt
+touch input
 
 echo "package main 
 import (\"os\")
@@ -24,4 +24,4 @@ go fmt main.go
 SESSION=`cat ../session`
 URL="https://adventofcode.com/2024/day/$1/input"
 
-curl $URL -X GET --cookie "session=$SESSION" > input.txt
+curl $URL -X GET --cookie "session=$SESSION" > input
