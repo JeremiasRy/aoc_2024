@@ -1,7 +1,6 @@
 package main
 
 import (
-	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -22,7 +21,7 @@ func main() {
 	input := string(b)
 
 	leftIds := []int{}
-	rightIds := []int{}
+	rightIds := map[int]int{}
 
 	for _, line := range strings.Split(input, "\n") {
 		if len(line) == 0 {
@@ -34,30 +33,15 @@ func main() {
 		leftInt, _ := strconv.Atoi(left)
 		rightInt, _ := strconv.Atoi(right)
 
-		leftIds = insert(leftInt, leftIds)
-		rightIds = insert(rightInt, rightIds)
+		leftIds = append(leftIds, leftInt)
+		rightIds[rightInt] += 1
 	}
-	distance := 0
-	i := 0
 
-	for i < len(leftIds) {
-		distance += int(math.Abs(float64(leftIds[i] - rightIds[i])))
-		i++
+	similarity := 0
+	for _, id := range leftIds {
+		multiply := rightIds[id]
+		similarity += id * multiply
 	}
-	println(distance)
-}
 
-func insert(num int, nums []int) []int {
-	nums = append(nums, num)
-	i := 0
-
-	for i < len(nums) {
-		j := i
-		for j > 0 && nums[j-1] > nums[j] {
-			nums[j-1], nums[j] = nums[j], nums[j-1]
-			j = j - 1
-		}
-		i++
-	}
-	return nums
+	println(similarity)
 }
