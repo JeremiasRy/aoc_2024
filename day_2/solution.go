@@ -17,16 +17,9 @@ func Solution(input string) int {
 
 		if !isSafe {
 			for i := range nums {
-				sub := make([]int, 0)
+				sub := append(make([]int, 0), nums[:i]...)
+				sub = append(sub, nums[i+1:]...)
 
-				if i == 0 {
-					sub = append(sub, nums[i+1:]...)
-				} else if i == len(nums)-1 {
-					sub = append(sub, nums[:len(nums)-1]...)
-				} else {
-					sub = append(sub, nums[:i]...)
-					sub = append(sub, nums[i+1:]...)
-				}
 				if isValidSequence(sub) {
 					safe++
 					break
