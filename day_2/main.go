@@ -2,8 +2,6 @@ package main
 
 import (
 	"os"
-	"strconv"
-	"strings"
 )
 
 type Direction int
@@ -27,61 +25,5 @@ func main() {
 	}
 
 	input := string(b)
-	safe := 0
-	for _, report := range strings.Split(input, "\n") {
-		if len(report) == 0 {
-			continue
-		}
-
-		nums := strings.Split(report, " ")
-		prev, _ := strconv.Atoi(nums[0])
-		dir := NONE
-		isSafe := true
-
-		for _, str := range nums[1:] {
-			current, _ := strconv.Atoi(str)
-			diff := prev - current
-
-			if dir == NONE {
-				if diff == 0 {
-					isSafe = false
-					break
-				}
-
-				if diff <= -1 && diff >= -3 {
-					dir = Increasing
-					prev = current
-					continue
-				}
-
-				if diff >= 1 && diff <= 3 {
-					dir = Decreasing
-					prev = current
-					continue
-				}
-				isSafe = false
-				break
-			}
-
-			if dir == Increasing {
-				if !(diff <= -1 && diff >= -3) {
-					isSafe = false
-					break
-				}
-			}
-
-			if dir == Decreasing {
-				if !(diff >= 1 && diff <= 3) {
-					isSafe = false
-					break
-				}
-			}
-
-			prev = current
-		}
-		if isSafe {
-			safe += 1
-		}
-	}
-	println(safe)
+	println(Solution(input))
 }
