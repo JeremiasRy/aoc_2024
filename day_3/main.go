@@ -117,14 +117,6 @@ func (p *Parser) consume() Token {
 	return t
 }
 
-func (p *Parser) consumeUntil(t TokenType) bool {
-	for !p.isAtEnd() && p.peek().t != t {
-		p.consume()
-	}
-
-	return p.peek().t == Mul
-}
-
 func (p *Parser) parseInteger() int {
 	str := []string{}
 
