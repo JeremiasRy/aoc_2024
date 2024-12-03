@@ -15,6 +15,8 @@ type Token struct {
 const (
 	Digit TokenType = iota
 	Mul
+	Do
+	Dont
 	LeftParen
 	RightParen
 	Comma
@@ -25,10 +27,24 @@ const (
 func parseTokens(src string) []Token {
 	r := []Token{}
 	prev := ""
-	for _, ch := range src {
+	i := 0
+	for i < len(src)-1 {
+		ch := rune(src[i])
+
 		if ch >= '0' && ch <= '9' {
 			r = append(r, Token{t: Digit, ch: ch})
 		} else if ch == '(' {
+			if i+1 < len(src)-1 && src[i+1] == ')' {
+				if prev == "do" {
+					r = append(r, Token{t: Do})
+					i++
+					prev = ""
+				} else if prev == "don't" {
+					r = append(r, Token{t: Dont})
+					i++
+					prev = ""
+				}
+			}
 			r = append(r, Token{t: LeftParen})
 		} else if ch == ')' {
 			r = append(r, Token{t: RightParen})
@@ -47,9 +63,36 @@ func parseTokens(src string) []Token {
 				r = append(r, Token{t: Mul})
 				prev = ""
 			}
+		} else if ch == 'd' {
+			prev = "d"
+		} else if ch == 'o' {
+			if prev == "d" {
+				prev = "do"
+			} else {
+				prev = ""
+			}
+		} else if ch == 'n' {
+			if prev == "do" {
+				prev = "don"
+			} else {
+				prev = ""
+			}
+		} else if ch == '\'' {
+			if prev == "don" {
+				prev = "don'"
+			} else {
+				prev = ""
+			}
+		} else if ch == 't' {
+			if prev == "don'" {
+				prev = "don't"
+			} else {
+				prev = ""
+			}
 		} else {
 			r = append(r, Token{t: Ignore})
 		}
+		i++
 	}
 	r = append(r, Token{t: EOF})
 	return r
@@ -97,10 +140,25 @@ func (p *Parser) parseInteger() int {
 func (p *Parser) parse() int {
 	res := [][]int{}
 
+	do := true
 	for !p.isAtEnd() {
-		if !p.consumeUntil(Mul) {
+		if p.peek().t == Do {
+			do = true
+			p.consume()
 			continue
 		}
+
+		if p.peek().t == Dont {
+			do = false
+			p.consume()
+			continue
+		}
+
+		if p.peek().t != Mul {
+			p.consume()
+			continue
+		}
+
 		p.consume()
 
 		if p.peek().t != LeftParen {
@@ -130,7 +188,9 @@ func (p *Parser) parse() int {
 			continue
 		}
 
-		res = append(res, []int{left, right})
+		if do {
+			res = append(res, []int{left, right})
+		}
 	}
 
 	result := 0
