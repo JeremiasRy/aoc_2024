@@ -43,24 +43,29 @@ func main() {
 			continue
 		}
 		nums := parseNums(strings.Split(update, ","))
-		valid := true
+		corrected := false
 
-	Loop:
-		for i, num := range nums {
-			rules := ruleMap[num]
+		i := 0
+		for i < len(nums) {
+			current := nums[i]
+			rules := ruleMap[current]
 
 			j := i + 1
 
 			for j < len(nums) {
-				if !slices.Contains(rules, nums[j]) {
-					valid = false
-					break Loop
+				next := nums[j]
+				if !slices.Contains(rules, next) {
+					corrected = true
+					nums[i], nums[j] = nums[j], nums[i]
+					i -= 1
+					break
 				}
 				j++
 			}
+			i++
 		}
 
-		if valid {
+		if corrected {
 			middle := nums[len(nums)/2]
 			result += middle
 		}
