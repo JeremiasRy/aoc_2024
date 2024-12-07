@@ -6,18 +6,6 @@ import (
 	"strings"
 )
 
-type OP int
-
-const (
-	ADD OP = iota
-	MULTIPLY
-)
-
-type StackItem struct {
-	current  int
-	equation []string
-}
-
 func main() {
 	if len(os.Args) != 2 {
 		println("Usage: go run main.go <input>")
@@ -40,7 +28,7 @@ func main() {
 
 		nums := parseNums(strings.Split(strings.Join(strings.Split(equation, ":"), ""), " "))
 
-		target, nums := nums[0], append(nums[1:], -1)
+		target, nums := nums[0], append(nums[1:], 0)
 		stack := [][]int{}
 		stack = append(stack, []int{nums[0]})
 
@@ -50,7 +38,7 @@ func main() {
 			next := []int{}
 
 			for _, current := range pop {
-				if num == -1 && current == target {
+				if num == 0 && current == target {
 					result += current
 					break
 				}
@@ -58,12 +46,19 @@ func main() {
 				sum := current + num
 				product := current * num
 
+				str := strings.Join([]string{strconv.Itoa(current), strconv.Itoa(num)}, "")
+				concatenation, _ := strconv.Atoi(str)
+
 				if sum <= target {
 					next = append(next, sum)
 				}
 
 				if product <= target {
 					next = append(next, product)
+				}
+
+				if concatenation <= target {
+					next = append(next, concatenation)
 				}
 			}
 			stack = append(stack, next)
