@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"os"
 	"strings"
 )
@@ -14,101 +15,9 @@ const (
 	LEFT
 )
 
-type Guard struct {
-	current    int
-	direction  Direction
-	areaWidth  int
-	areaHeight int
-	area       string
-	patrolled  map[int]int
-}
-
-func (g *Guard) peek() (bool, rune) {
-	x, y := g.current%g.areaWidth, g.current/g.areaWidth
-
-	switch g.direction {
-	case UP:
-		{
-			if y-1 < 0 {
-				return true, ' '
-			}
-
-			return false, rune(g.area[g.current-g.areaWidth])
-		}
-	case RIGHT:
-		{
-			if x+1 >= g.areaWidth {
-				return true, ' '
-			}
-
-			return false, rune(g.area[g.current+1])
-		}
-	case DOWN:
-		{
-			if y+1 >= g.areaHeight {
-				return true, ' '
-			}
-
-			return false, rune(g.area[g.current+g.areaWidth])
-		}
-	case LEFT:
-		{
-			if x-1 < 0 {
-				return true, ' '
-			}
-			return false, rune(g.area[g.current-1])
-		}
-	}
-
-	// unreachable
-	return true, ' '
-}
-
-func (g *Guard) turn() {
-	if g.direction+1 >= 4 {
-		g.direction = 0
-		return
-	}
-
-	g.direction++
-}
-
-func (g *Guard) move() {
-	g.patrolled[g.current]++
-	switch g.direction {
-	case UP:
-		{
-			g.current = g.current - g.areaWidth
-		}
-	case RIGHT:
-		{
-			g.current = g.current + 1
-		}
-	case DOWN:
-		{
-			g.current = g.current + g.areaWidth
-		}
-	case LEFT:
-		{
-			g.current = g.current - 1
-		}
-	}
-}
-
-func (g *Guard) Patrol() {
-	for {
-		out, next := g.peek()
-
-		if out {
-			break
-		}
-
-		if next == '#' {
-			g.turn()
-		}
-
-		g.move()
-	}
+type Position struct {
+	x int
+	y int
 }
 
 func main() {
@@ -129,12 +38,167 @@ func main() {
 	w := len(rows[0]) + 1
 	h := len(rows[:len(rows)-1])
 
-	current := strings.Index(input, "^")
-	p := map[int]int{}
-	p[current]++
+	current := 0
+	dir := UP
 
-	g := Guard{current: current, direction: UP, areaWidth: w, areaHeight: h, area: input, patrolled: p}
-	g.Patrol()
+	obstacles := map[int]Position{}
 
-	println(len(p))
+	for i, ch := range input {
+		if ch == '#' {
+			obstacles[i] = getXY(i, w)
+		} else if ch == '^' {
+			current = i
+		}
+	}
+
+	travel := map[int]struct{}{}
+
+Loop:
+	for {
+		position := getXY(current, w)
+
+		switch dir {
+		case UP:
+			{
+				thereIs, at := isThereAnObstacleAbove(position, obstacles)
+				if thereIs {
+					diff := position.y - at - 1
+					for i := 1; i <= diff; i++ {
+						current -= w
+						travel[current] = struct{}{}
+					}
+					dir = RIGHT
+				} else {
+					diff := h - (h - position.y)
+					for i := 1; i <= diff; i++ {
+						current -= w
+						travel[current] = struct{}{}
+					}
+					break Loop
+				}
+
+			}
+		case DOWN:
+			{
+				thereIs, at := isThereAnObstacleBelow(position, obstacles)
+				if thereIs {
+					diff := at - position.y - 1
+					for i := 1; i <= diff; i++ {
+						current += w
+						travel[current] = struct{}{}
+					}
+					dir = LEFT
+				} else {
+					diff := h - position.y
+					for i := 1; i <= diff; i++ {
+						current += w
+						travel[current] = struct{}{}
+					}
+					break Loop
+				}
+			}
+		case LEFT:
+			{
+				thereIs, at := isThereAnObstacleLeft(position, obstacles)
+				if thereIs {
+					diff := position.x - at - 1
+					for i := 1; i <= diff; i++ {
+						current--
+						travel[current] = struct{}{}
+					}
+					dir = UP
+				} else {
+					diff := w - (w - position.x)
+					for i := 1; i <= diff; i++ {
+						current--
+						travel[current] = struct{}{}
+					}
+					break Loop
+				}
+			}
+		case RIGHT:
+			{
+				thereIs, at := isThereAnObstacleRight(position, obstacles)
+
+				if thereIs {
+					diff := at - position.x - 1
+					for i := 1; i <= diff; i++ {
+						current++
+						travel[current] = struct{}{}
+					}
+					dir = DOWN
+				} else {
+
+					diff := w - position.x
+					for i := 1; i <= diff; i++ {
+						current++
+						travel[current] = struct{}{}
+					}
+					break Loop
+				}
+			}
+		}
+	}
+	println(len(travel) - 1)
+}
+
+func isThereAnObstacleBelow(pos Position, obstacles map[int]Position) (bool, int) {
+	x, y := pos.x, pos.y
+	min := math.MaxInt32
+
+	for _, o := range obstacles {
+		if y < o.y && x == o.x {
+
+			if o.y < min {
+				min = o.y
+			}
+		}
+	}
+	return min != math.MaxInt32, min
+}
+
+func isThereAnObstacleAbove(pos Position, obstacles map[int]Position) (bool, int) {
+	x, y := pos.x, pos.y
+	min := -1
+
+	for _, o := range obstacles {
+		if y > o.y && x == o.x {
+			if o.y > min {
+				min = o.y
+			}
+		}
+	}
+	return min != -1, min
+}
+
+func isThereAnObstacleLeft(pos Position, obstacles map[int]Position) (bool, int) {
+	x, y := pos.x, pos.y
+	min := -1
+
+	for _, o := range obstacles {
+		if y == o.y && x > o.x {
+			if o.x > min {
+				min = o.x
+			}
+		}
+	}
+	return min != -1, min
+}
+
+func isThereAnObstacleRight(pos Position, obstacles map[int]Position) (bool, int) {
+	x, y := pos.x, pos.y
+	min := math.MaxInt32
+
+	for _, o := range obstacles {
+		if y == o.y && x < o.x {
+			if o.x < min {
+				min = o.x
+			}
+		}
+	}
+	return min != math.MaxInt32, min
+}
+
+func getXY(current int, w int) Position {
+	return Position{x: current % w, y: current / w}
 }
