@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"slices"
 	"strings"
 )
 
@@ -33,213 +32,122 @@ func main() {
 	}
 
 	input := string(b)
-	rows := strings.Split(input, "\n")
+	rows := strings.Split(strings.TrimSpace(input), "\n")
 
-	w := len(rows[0]) + 1
-	h := len(rows[:len(rows)-1])
+	var start Position
 
-	current := strings.Index(input, "^")
-	start := current
+Loop:
+	for i := 0; i < len(rows); i++ {
+		for j := 0; j < len(rows[i]); j++ {
+
+			if rows[i][j] == '^' {
+				start = Position{x: j, y: i}
+				break Loop
+			}
+		}
+	}
+
+	current := start
+	route := map[Position]struct{}{}
+
+	w := len(rows[0])
+	h := len(rows)
+
 	dir := UP
-
-	route := map[int][]Direction{}
-	print := strings.Split(input, "")
-
-	print[current] = "0"
-
 	for {
-		out, next := peek(input, current, dir, w, h)
-
+		out, next, position := peek(rows, current, dir, w, h)
 		if out {
+			route[current] = struct{}{}
 			break
 		}
 
-		route[current] = append(route[current], dir)
+		route[current] = struct{}{}
 
 		if next == '#' {
-			if print[current] != "0" {
-				print[current] = "+"
-			}
-			if dir+1 >= 4 {
-				dir = UP
-			} else {
-				dir++
-			}
+			dir = (dir + 1) % 4
+		} else {
+			current = position
 		}
-		current = move(current, dir, w)
 	}
-	route[current] = append(route[current], dir)
+	println(len(route))
+	loops := 0
 
-	for k, v := range route {
-		//fmt.Printf("%v\n", getXY(k, w))
-		if len(v) >= 2 && print[k] != "0" {
-			print[k] = "+"
-		} else if print[k] != "+" && print[k] != "0" {
-			switch v[0] {
-			case UP:
-				print[k] = "^"
-			case DOWN:
-				print[k] = "v"
-			case LEFT:
-				print[k] = "<"
-			case RIGHT:
-				print[k] = ">"
-			}
+	for position := range route {
+		if isInfiniteLoop(rows, start, w, h, position) {
+			loops++
 		}
-
 	}
-
-	println(strings.Join(print, ""))
-	count := 0
-	infiniteLoopObstaclePositions := map[int]int{}
-	for obstacle, directions := range route {
-		possible := addObstacle(input, obstacle)
-		current = start
-
-		loop, _ := isInfiniteLoop(possible, current, w, h)
-		if loop {
-			count++
-			infiniteLoopObstaclePositions[obstacle]++
-		}
-
-		for _, dir := range directions {
-			obstacle = move(obstacle, dir, w)
-			possible := addObstacle(input, obstacle)
-			current = start
-
-			loop, _ := isInfiniteLoop(possible, current, w, h)
-			if loop {
-				infiniteLoopObstaclePositions[obstacle]++
-			}
-		}
-
-	}
-	println(len(infiniteLoopObstaclePositions))
-	println(count)
-
-	hailMary := 0
-	for _, v := range infiniteLoopObstaclePositions {
-		hailMary += v
-	}
-
-	println(hailMary)
+	println(loops)
 }
 
-func isInfiniteLoop(input string, current int, w int, h int) (bool, string) {
-	route := map[int][]Direction{}
-	debug := strings.Split(input, "")
-	dir := UP
-
-	isInfinite := false
+func isInfiniteLoop(rows []string, current Position, w int, h int, newObstacle Position) bool {
+	direction := UP
+	obstacles := map[Position]map[Direction]bool{}
 	for {
-		out, next := peek(input, current, dir, w, h)
+		out, next, position := peek(rows, current, direction, w, h)
 
 		if out {
-			break
+			return false
 		}
 
-		if slices.Contains(route[current], dir) {
-			isInfinite = true
-			break
-		}
-
-		route[current] = append(route[current], dir)
-
-		if next == '#' || next == 'O' {
-			if debug[current] != "^" {
-				debug[current] = "+"
+		if next == '#' || newObstacle == position {
+			if _, exists := obstacles[position]; !exists {
+				obstacles[position] = map[Direction]bool{}
 			}
-
-			if dir+1 >= 4 {
-				dir = UP
-			} else {
-				dir++
+			if obstacles[position][direction] {
+				return true
 			}
-		}
-		current = move(current, dir, w)
-	}
-
-	for k, v := range route {
-		if len(v) >= 2 && debug[k] != "^" {
-			debug[k] = "+"
-		} else if debug[k] != "+" && debug[k] != "^" && debug[k] != "0" {
-			switch v[0] {
-			case UP:
-				fallthrough
-			case DOWN:
-				debug[k] = "|"
-			case LEFT:
-				fallthrough
-			case RIGHT:
-				debug[k] = "-"
-			}
+			obstacles[position][direction] = true
+			direction = (direction + 1) % 4
+		} else {
+			current = position
 		}
 	}
-
-	return isInfinite, strings.Join(debug, "")
 }
 
-func peek(input string, current int, dir Direction, w int, h int) (bool, byte) {
-	next := getXY(current, w)
-	x, y := next.x, next.y
+func peek(rows []string, p Position, dir Direction, w int, h int) (bool, byte, Position) {
+	x, y := p.x, p.y
 	switch dir {
 	case UP:
 		{
-			if y-1 < 0 {
-				return true, ' '
+			if isOutOfBounds(w, h, x, y-1) {
+				return true, 0, Position{}
 			}
-			return false, input[current-w]
-		}
-	case RIGHT:
-		{
-			if x+1 >= w-1 {
-				return true, ' '
-			}
-			return false, input[current+1]
+
+			return false, rows[y-1][x], Position{x, y - 1}
+
 		}
 	case DOWN:
 		{
-			if y+1 >= h {
-				return true, ' '
+			if isOutOfBounds(w, h, x, y+1) {
+				return true, 0, Position{}
 			}
-			return false, input[current+w]
+			return false, rows[y+1][x], Position{x, y + 1}
+
 		}
 	case LEFT:
 		{
-			if x-1 < 0 {
-				return true, ' '
+			if isOutOfBounds(w, h, x-1, y) {
+				return true, 0, Position{}
 			}
-			return false, input[current-1]
+			return false, rows[y][x-1], Position{x - 1, y}
+		}
+	case RIGHT:
+		{
+			if isOutOfBounds(w, h, x+1, y) {
+				return true, 0, Position{}
+			}
+			return false, rows[y][x+1], Position{x + 1, y}
+		}
+	default:
+		{
+			os.Exit(1)
 		}
 	}
-	// unreachable
-	return true, ' '
+
+	return false, 0, Position{}
 }
 
-func move(current int, dir Direction, w int) int {
-	switch dir {
-	case UP:
-		return current - w
-	case RIGHT:
-		return current + 1
-	case DOWN:
-		return current + w
-	case LEFT:
-		return current - 1
-	}
-
-	return -1
-}
-
-func addObstacle(input string, obstacle int) string {
-	old := strings.Split(input, "")
-	new := make([]string, len(old))
-	copy(new, old)
-
-	new[obstacle] = "O"
-	return strings.Join(new, "")
-}
-
-func getXY(current int, w int) Position {
-	return Position{x: current % w, y: current / w}
+func isOutOfBounds(w int, h int, x int, y int) bool {
+	return x < 0 || x >= w || y < 0 || y >= h
 }
