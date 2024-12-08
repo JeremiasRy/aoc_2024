@@ -1,8 +1,8 @@
 package main
 
 import (
-	"math"
 	"os"
+	"slices"
 	"strings"
 )
 
@@ -38,165 +38,206 @@ func main() {
 	w := len(rows[0]) + 1
 	h := len(rows[:len(rows)-1])
 
-	current := 0
+	current := strings.Index(input, "^")
+	start := current
 	dir := UP
 
-	obstacles := map[int]Position{}
+	route := map[int][]Direction{}
+	print := strings.Split(input, "")
 
-	for i, ch := range input {
-		if ch == '#' {
-			obstacles[i] = getXY(i, w)
-		} else if ch == '^' {
-			current = i
-		}
-	}
+	print[current] = "0"
 
-	travel := map[int]struct{}{}
-
-Loop:
 	for {
-		position := getXY(current, w)
+		out, next := peek(input, current, dir, w, h)
 
-		switch dir {
-		case UP:
-			{
-				thereIs, at := isThereAnObstacleAbove(position, obstacles)
-				if thereIs {
-					diff := position.y - at - 1
-					for i := 1; i <= diff; i++ {
-						current -= w
-						travel[current] = struct{}{}
-					}
-					dir = RIGHT
-				} else {
-					diff := h - (h - position.y)
-					for i := 1; i <= diff; i++ {
-						current -= w
-						travel[current] = struct{}{}
-					}
-					break Loop
-				}
+		if out {
+			break
+		}
 
+		route[current] = append(route[current], dir)
+
+		if next == '#' {
+			if print[current] != "0" {
+				print[current] = "+"
 			}
-		case DOWN:
-			{
-				thereIs, at := isThereAnObstacleBelow(position, obstacles)
-				if thereIs {
-					diff := at - position.y - 1
-					for i := 1; i <= diff; i++ {
-						current += w
-						travel[current] = struct{}{}
-					}
-					dir = LEFT
-				} else {
-					diff := h - position.y
-					for i := 1; i <= diff; i++ {
-						current += w
-						travel[current] = struct{}{}
-					}
-					break Loop
-				}
-			}
-		case LEFT:
-			{
-				thereIs, at := isThereAnObstacleLeft(position, obstacles)
-				if thereIs {
-					diff := position.x - at - 1
-					for i := 1; i <= diff; i++ {
-						current--
-						travel[current] = struct{}{}
-					}
-					dir = UP
-				} else {
-					diff := w - (w - position.x)
-					for i := 1; i <= diff; i++ {
-						current--
-						travel[current] = struct{}{}
-					}
-					break Loop
-				}
-			}
-		case RIGHT:
-			{
-				thereIs, at := isThereAnObstacleRight(position, obstacles)
-
-				if thereIs {
-					diff := at - position.x - 1
-					for i := 1; i <= diff; i++ {
-						current++
-						travel[current] = struct{}{}
-					}
-					dir = DOWN
-				} else {
-
-					diff := w - position.x
-					for i := 1; i <= diff; i++ {
-						current++
-						travel[current] = struct{}{}
-					}
-					break Loop
-				}
+			if dir+1 >= 4 {
+				dir = UP
+			} else {
+				dir++
 			}
 		}
+		current = move(current, dir, w)
 	}
-	println(len(travel) - 1)
+	route[current] = append(route[current], dir)
+
+	for k, v := range route {
+		//fmt.Printf("%v\n", getXY(k, w))
+		if len(v) >= 2 && print[k] != "0" {
+			print[k] = "+"
+		} else if print[k] != "+" && print[k] != "0" {
+			switch v[0] {
+			case UP:
+				print[k] = "^"
+			case DOWN:
+				print[k] = "v"
+			case LEFT:
+				print[k] = "<"
+			case RIGHT:
+				print[k] = ">"
+			}
+		}
+
+	}
+
+	println(strings.Join(print, ""))
+	count := 0
+	infiniteLoopObstaclePositions := map[int]int{}
+	for obstacle, directions := range route {
+		possible := addObstacle(input, obstacle)
+		current = start
+
+		loop, _ := isInfiniteLoop(possible, current, w, h)
+		if loop {
+			count++
+			infiniteLoopObstaclePositions[obstacle]++
+		}
+
+		for _, dir := range directions {
+			obstacle = move(obstacle, dir, w)
+			possible := addObstacle(input, obstacle)
+			current = start
+
+			loop, _ := isInfiniteLoop(possible, current, w, h)
+			if loop {
+				infiniteLoopObstaclePositions[obstacle]++
+			}
+		}
+
+	}
+	println(len(infiniteLoopObstaclePositions))
+	println(count)
+
+	hailMary := 0
+	for _, v := range infiniteLoopObstaclePositions {
+		hailMary += v
+	}
+
+	println(hailMary)
 }
 
-func isThereAnObstacleBelow(pos Position, obstacles map[int]Position) (bool, int) {
-	x, y := pos.x, pos.y
-	min := math.MaxInt32
+func isInfiniteLoop(input string, current int, w int, h int) (bool, string) {
+	route := map[int][]Direction{}
+	debug := strings.Split(input, "")
+	dir := UP
 
-	for _, o := range obstacles {
-		if y < o.y && x == o.x {
+	isInfinite := false
+	for {
+		out, next := peek(input, current, dir, w, h)
 
-			if o.y < min {
-				min = o.y
+		if out {
+			break
+		}
+
+		if slices.Contains(route[current], dir) {
+			isInfinite = true
+			break
+		}
+
+		route[current] = append(route[current], dir)
+
+		if next == '#' || next == 'O' {
+			if debug[current] != "^" {
+				debug[current] = "+"
+			}
+
+			if dir+1 >= 4 {
+				dir = UP
+			} else {
+				dir++
+			}
+		}
+		current = move(current, dir, w)
+	}
+
+	for k, v := range route {
+		if len(v) >= 2 && debug[k] != "^" {
+			debug[k] = "+"
+		} else if debug[k] != "+" && debug[k] != "^" && debug[k] != "0" {
+			switch v[0] {
+			case UP:
+				fallthrough
+			case DOWN:
+				debug[k] = "|"
+			case LEFT:
+				fallthrough
+			case RIGHT:
+				debug[k] = "-"
 			}
 		}
 	}
-	return min != math.MaxInt32, min
+
+	return isInfinite, strings.Join(debug, "")
 }
 
-func isThereAnObstacleAbove(pos Position, obstacles map[int]Position) (bool, int) {
-	x, y := pos.x, pos.y
-	min := -1
-
-	for _, o := range obstacles {
-		if y > o.y && x == o.x {
-			if o.y > min {
-				min = o.y
+func peek(input string, current int, dir Direction, w int, h int) (bool, byte) {
+	next := getXY(current, w)
+	x, y := next.x, next.y
+	switch dir {
+	case UP:
+		{
+			if y-1 < 0 {
+				return true, ' '
 			}
+			return false, input[current-w]
+		}
+	case RIGHT:
+		{
+			if x+1 >= w-1 {
+				return true, ' '
+			}
+			return false, input[current+1]
+		}
+	case DOWN:
+		{
+			if y+1 >= h {
+				return true, ' '
+			}
+			return false, input[current+w]
+		}
+	case LEFT:
+		{
+			if x-1 < 0 {
+				return true, ' '
+			}
+			return false, input[current-1]
 		}
 	}
-	return min != -1, min
+	// unreachable
+	return true, ' '
 }
 
-func isThereAnObstacleLeft(pos Position, obstacles map[int]Position) (bool, int) {
-	x, y := pos.x, pos.y
-	min := -1
-
-	for _, o := range obstacles {
-		if y == o.y && x > o.x {
-			if o.x > min {
-				min = o.x
-			}
-		}
+func move(current int, dir Direction, w int) int {
+	switch dir {
+	case UP:
+		return current - w
+	case RIGHT:
+		return current + 1
+	case DOWN:
+		return current + w
+	case LEFT:
+		return current - 1
 	}
-	return min != -1, min
+
+	return -1
 }
 
-func isThereAnObstacleRight(pos Position, obstacles map[int]Position) (bool, int) {
-	x, y := pos.x, pos.y
-	min := math.MaxInt32
+func addObstacle(input string, obstacle int) string {
+	old := strings.Split(input, "")
+	new := make([]string, len(old))
+	copy(new, old)
 
-	for _, o := range obstacles {
-		if y == o.y && x < o.x {
-			if o.x < min {
-				min = o.x
-			}
-		}
-	}
-	return min != math.MaxInt32, min
+	new[obstacle] = "O"
+	return strings.Join(new, "")
 }
 
 func getXY(current int, w int) Position {
