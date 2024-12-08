@@ -27,6 +27,7 @@ func main() {
 	rows = rows[:len(rows)-1]
 
 	antennas := map[string][]Antenna{}
+	antennaLocations := map[int]struct{}{}
 	antinodes := map[int]struct{}{}
 
 	w := len(rows[0])
@@ -35,12 +36,12 @@ func main() {
 	for y, row := range rows {
 		for x, ch := range row {
 			frequency := string(ch)
-			if frequency != "." && frequency != "\n" {
+			if frequency != "." {
 				antennas[frequency] = append(antennas[frequency], Antenna{x, y})
+				antennaLocations[XYToPosition(x, y, w)] = struct{}{}
 			}
 		}
 	}
-
 	for _, nodes := range antennas {
 		for _, a := range nodes {
 			for _, b := range nodes {
@@ -50,14 +51,19 @@ func main() {
 				deltaX, deltaY := distanceBetween(a, b)
 				antinodeX, antinodeY := a.x+deltaX, a.y+deltaY
 
-				if !isOutOfBounds(antinodeX, antinodeY, w, h) {
-					index := XYToPosition(antinodeX, antinodeY, w+1)
-					antinodes[index] = struct{}{}
+				for !isOutOfBounds(antinodeX, antinodeY, w, h) {
+					index := XYToPosition(antinodeX, antinodeY, w)
+					_, hasAntenna := antennaLocations[index]
+					if !hasAntenna {
+						antinodes[index] = struct{}{}
+					}
+					antinodeX, antinodeY = antinodeX+deltaX, antinodeY+deltaY
 				}
+
 			}
 		}
 	}
-	println(len(antinodes))
+	println(len(antinodes) + len(antennaLocations))
 }
 
 func XYToPosition(x int, y int, w int) int {
