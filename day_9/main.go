@@ -18,6 +18,11 @@ type Block struct {
 	t  BlockType
 }
 
+type Chunk struct {
+	lo int
+	hi int
+}
+
 func main() {
 	if len(os.Args) != 2 {
 		println("Usage: go run main.go <input>")
@@ -48,31 +53,79 @@ func main() {
 		t = (t + 1) % 2
 	}
 
-	lo, hi := 0, len(disk)-1
+	fileChunks := getFileChunks(disk)
+	freeChunks := getFreeChunks(disk)
+	for _, file := range fileChunks {
+		for _, free := range freeChunks {
+			fileSize := file.hi - file.lo
+			freeSize := free.hi - free.lo
 
-	for lo < hi {
-		if disk[hi].t != FILE {
-			hi--
-			continue
-		}
+			if freeSize >= fileSize && free.lo < file.lo {
+				i := 0
 
-		if disk[lo].t != FREE {
-			lo++
-			continue
+				for i < fileSize {
+					disk[free.lo+i], disk[file.hi-i] = disk[file.hi-i], disk[free.lo+i]
+					i++
+				}
+				break
+			}
 		}
-
-		if disk[hi].t == FILE && disk[lo].t == FREE {
-			disk[lo], disk[hi] = disk[hi], disk[lo]
-		}
+		freeChunks = getFreeChunks(disk)
 	}
 
 	checksum := 0
 
 	for pos, block := range disk {
+
 		if block.t == FREE {
-			break
+			continue
 		}
 		checksum += pos * block.id
 	}
 	println(checksum)
+}
+
+func getFileChunks(disk []Block) []Chunk {
+	result := []Chunk{}
+
+Loop:
+	for i := len(disk) - 1; i >= 0; i-- {
+		if disk[i].t == FREE {
+			continue
+		}
+		hi := i
+		id := disk[i].id
+		for disk[i].t == FILE && disk[i].id == id {
+			i--
+			if i < 0 {
+				break Loop
+			}
+		}
+		lo := i
+		i++
+		result = append(result, Chunk{lo, hi})
+	}
+	return result
+}
+
+func getFreeChunks(disk []Block) []Chunk {
+	result := []Chunk{}
+
+	for i := 0; i < len(disk); i++ {
+		if disk[i].t == FILE {
+			continue
+		}
+
+		lo := i
+		for disk[i].t == FREE {
+			i++
+			if i >= len(disk) {
+				break
+			}
+		}
+
+		hi := i
+		result = append(result, Chunk{lo, hi})
+	}
+	return result
 }
