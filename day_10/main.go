@@ -30,7 +30,7 @@ type Node struct {
 	val      int
 	position Position
 	next     []*Node
-	visited  map[*Node]struct{}
+	visited  map[*Node]int
 }
 
 func (n *Node) isTrailHead() bool {
@@ -80,7 +80,7 @@ func main() {
 				continue
 			}
 			position := Position{y, x}
-			topoMap[position] = &Node{h: h, w: w, val: val, position: position, next: []*Node{}, visited: map[*Node]struct{}{}}
+			topoMap[position] = &Node{h: h, w: w, val: val, position: position, next: []*Node{}, visited: map[*Node]int{}}
 		}
 	}
 
@@ -92,11 +92,9 @@ func main() {
 		}
 	}
 
-	result := 0
 	for _, head := range trailHeads {
 		start := head
 		current := head
-		ends := 0
 
 		stack := current.next
 
@@ -105,19 +103,23 @@ func main() {
 			stack = stack[:len(stack)-1]
 
 			if current.isTrailEnd() {
-				if _, visited := current.visited[start]; !visited {
-					current.visited[start] = struct{}{}
-					ends++
-				}
+				current.visited[start]++
 				continue
 			}
 
 			stack = append(stack, current.next...)
 		}
-		result += ends
+	}
+
+	result := 0
+	for _, n := range topoMap {
+		if n.isTrailEnd() {
+			for _, rating := range n.visited {
+				result += rating
+			}
+		}
 	}
 	println(result)
-
 }
 
 func outOfBounds(p Position, w int, h int) bool {
