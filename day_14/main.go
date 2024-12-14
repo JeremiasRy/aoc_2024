@@ -98,9 +98,32 @@ func main() {
 	}
 
 	seconds := 0
-	for seconds < 100 {
-		for _, r := range robots {
-			r.tick()
+	for seconds < 101*103 {
+		tiles := map[Position]int{}
+		for y := 0; y <= HEIGHT; y++ {
+			for x := 0; x <= WIDTH; x++ {
+				p := Position{x: x, y: y}
+
+				for _, robot := range robots {
+					if robot.p.isEqual(p) {
+						tiles[p]++
+					}
+				}
+				if _, hasRobot := tiles[p]; !hasRobot {
+					tiles[p] = 0
+				}
+			}
+		}
+
+		tree := true
+		for _, v := range tiles {
+			if v > 1 {
+				tree = false
+				break
+			}
+		}
+		if tree {
+			println("Tree: ", seconds)
 		}
 		seconds++
 	}
