@@ -31,27 +31,32 @@ func main() {
 		os.Exit(1)
 	}
 
-	stones := []int{}
 	input := string(b)
+	counts := map[int]int{}
 	for _, s := range strings.Split(strings.TrimSpace(input), " ") {
 		i, _ := strconv.Atoi(s)
-		stones = append(stones, i)
+		counts[i]++
 	}
 
-	blinks := 25
+	blinks := 75
 
 	for blinks > 0 {
-		new := []int{}
-		for _, stone := range stones {
+		next := map[int]int{}
+		for stone, count := range counts {
 			first, second := blink(stone)
-			new = append(new, first)
-			if second >= 0 {
-				new = append(new, second)
+			next[first] += count
+			if second != -1 {
+				next[second] += count
 			}
 		}
-		stones = new
+		counts = next
 		blinks--
 	}
 
-	println(len(stones))
+	total := 0
+	for _, count := range counts {
+		total += count
+	}
+
+	println(total)
 }
