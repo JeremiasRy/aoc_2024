@@ -39,7 +39,6 @@ func (p *XY) getNextPosition(d Direction) XY {
 }
 
 var MemorySpace = make(map[XY]bool)
-var BestRoute = make(map[XY]int)
 
 const WIDTH = 71
 const HEIGHT = 71
@@ -88,7 +87,7 @@ func main() {
 
 	input := strings.Split(strings.TrimSpace(string(b)), "\n")
 
-	for _, row := range input[0:1024] {
+	for _, row := range input[:1024] {
 		position := strings.Split(row, ",")
 
 		x, y := position[0], position[len(position)-1]
@@ -97,18 +96,35 @@ func main() {
 		MemorySpace[p] = true
 	}
 
+	for _, pixel := range input[1024:] {
+		position := strings.Split(pixel, ",")
+
+		x, y := position[0], position[len(position)-1]
+		p := parsePosition(x, y)
+
+		MemorySpace[p] = true
+
+		if !canReachExit() {
+			println(pixel)
+			break
+		}
+	}
+}
+
+func canReachExit() bool {
 	init := Historians{p: XY{x: 0, y: 0}, steps: 0}
 	queue := Queue{vals: []Historians{}}
+	best := map[XY]int{}
 
 	queue.enqueue(init)
 
 	for !queue.isEmpty() {
 		current := queue.dequeue()
 
-		low, visited := BestRoute[current.p]
+		low, visited := best[current.p]
 
 		if !visited {
-			BestRoute[current.p] = current.steps
+			best[current.p] = current.steps
 		}
 
 		if visited && current.steps > low {
@@ -116,7 +132,7 @@ func main() {
 		}
 
 		if current.steps < low {
-			BestRoute[current.p] = current.steps
+			best[current.p] = current.steps
 		}
 
 		//printDebug(MemorySpace, BestRoute)
@@ -133,7 +149,7 @@ func main() {
 			queue.enqueue(clone)
 		}
 	}
-	println(BestRoute[XY{x: 70, y: 70}])
+	return best[XY{x: 70, y: 70}] != 0
 }
 
 func printDebug(m map[XY]bool, visited map[XY]int) {
