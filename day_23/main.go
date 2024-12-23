@@ -36,34 +36,32 @@ func main() {
 		lan[left][right] = struct{}{}
 		lan[right][left] = struct{}{}
 	}
-	sets := map[string]struct{}{}
-	for c1, connections := range lan {
-		for c2 := range connections {
-			layer1 := lan[c2]
-
-			for c3 := range layer1 {
-				layer2 := lan[c3]
-
-				if _, found := layer2[c1]; found {
-					set := []string{c1, c2, c3}
-					slices.Sort(set)
-
-					j := strings.Join(set, ",")
-					sets[j] = struct{}{}
-				}
-			}
+	high := 0
+	result := ""
+	for c := range lan {
+		for c2 := range lan[c] {
+			r([]string{c, c2}, lan, &high, &result)
 		}
+
+	}
+	println(result)
+}
+
+func r(network []string, lanParty map[string]map[string]struct{}, high *int, result *string) {
+	if len(network) > *high {
+		slices.Sort(network)
+		*result = strings.Join(network, ",")
+		*high = len(network)
 	}
 
-	count := 0
-	for network := range sets {
-		for _, computer := range strings.Split(network, ",") {
-			if computer[0] == 't' {
-				count++
-				break
+	layer := lanParty[network[len(network)-1]]
+
+	for c := range layer {
+		for _, c2 := range network {
+			if _, connected := lanParty[c][c2]; !connected {
+				return
 			}
 		}
+		r(append(network, c), lanParty, high, result)
 	}
-
-	println(count)
 }
